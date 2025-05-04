@@ -117,3 +117,115 @@ export const testFilterOptions = {
   regions: ["United States", "Frankfurt", "Toronto", "United Kingdom"],
   currencies: ["USD", "EUR", "CAD"],
 };
+
+// constants/constants.ts
+
+// Map regions to countries
+export const REGION_TO_COUNTRY: { [key: string]: string } = {
+  "United States": "United States",
+  Frankfurt: "Germany",
+  Toronto: "Canada",
+  "United Kingdom": "United Kingdom",
+  Japan: "Japan",
+  "Hong Kong": "China",
+  Shanghai: "China",
+  Shenzhen: "China",
+  Mumbai: "India",
+  Singapore: "Singapore",
+  Amsterdam: "Netherlands",
+  Paris: "France",
+  Milan: "Italy",
+  Brussels: "Belgium",
+  Lisbon: "Portugal",
+  Madrid: "Spain",
+  Switzerland: "Switzerland",
+  Sweden: "Sweden",
+  Oslo: "Norway",
+  Copenhagen: "Denmark",
+  Helsinki: "Finland",
+  Vienna: "Austria",
+  Seoul: "South Korea",
+  Taiwan: "Taiwan",
+  Thailand: "Thailand",
+  Indonesia: "Indonesia",
+  Malaysia: "Malaysia",
+  Australia: "Australia",
+  "New Zealand": "New Zealand",
+  Brazil: "Brazil",
+  Mexico: "Mexico",
+  Argentina: "Argentina",
+  Chile: "Chile",
+  Colombia: "Colombia",
+  Peru: "Peru",
+  "South Africa": "South Africa",
+  Israel: "Israel",
+  Turkey: "Turkey",
+  "Saudi Arabia": "Saudi Arabia",
+  UAE: "United Arab Emirates",
+  Qatar: "Qatar",
+  Russia: "Russia",
+};
+
+// Map regions to Bloomberg exchange codes
+export const REGION_TO_EXCHANGE_CODE: { [key: string]: string } = {
+  "United States": "US",
+  Frankfurt: "GR",
+  Toronto: "CN",
+  "United Kingdom": "LN",
+  Japan: "JP",
+  "Hong Kong": "HK",
+  Shanghai: "CH",
+  Shenzhen: "CH",
+  Mumbai: "IN",
+  Singapore: "SP",
+  Amsterdam: "NA",
+  Paris: "FP",
+  Milan: "IM",
+  Brussels: "BB",
+  Lisbon: "PL",
+  Madrid: "SM",
+  Switzerland: "SW",
+  Sweden: "SS",
+  Oslo: "NO",
+  Copenhagen: "DC",
+  Helsinki: "FH",
+  Vienna: "AV",
+  Seoul: "KS",
+  Taiwan: "TT",
+  Thailand: "TB",
+  Indonesia: "IJ",
+  Malaysia: "MK",
+  Australia: "AU",
+  "New Zealand": "NZ",
+  Brazil: "BZ",
+  Mexico: "MM",
+  Argentina: "AR",
+  Chile: "CI",
+  Colombia: "CB",
+  Peru: "PE",
+  "South Africa": "SJ",
+  Israel: "IT",
+  Turkey: "TI",
+  "Saudi Arabia": "AB",
+  UAE: "UH",
+  Qatar: "QD",
+  Russia: "RX",
+};
+
+// Generate Bloomberg-style ticker
+export function generateBloombergTicker(
+  symbol: string,
+  region: string
+): string {
+  const exchangeCode = REGION_TO_EXCHANGE_CODE[region] || "UN"; // Default to Unknown
+
+  // For US stocks with .X symbol format, strip the extension for Bloomberg style
+  const cleanSymbol = symbol.includes(".") ? symbol.split(".")[0] : symbol;
+
+  return `${cleanSymbol} ${exchangeCode} Equity`;
+}
+
+// Get country from region
+export function getCountryFromRegion(region: string): string {
+  return REGION_TO_COUNTRY[region] || region;
+}

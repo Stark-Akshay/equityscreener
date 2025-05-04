@@ -1,4 +1,4 @@
-// components/FilterPanel.tsx
+// app/components/FilterPanel.tsx
 import { useState } from 'react';
 import { Check, ChevronDown, X } from 'lucide-react';
 import { ActiveFilters } from '../types/types';

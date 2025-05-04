@@ -1,11 +1,12 @@
-// components/SymbolSearch.tsx
+// app/components/SymbolSearch.tsx
 "use client";
 
 import { useState, useEffect, useRef } from 'react';
 import { useDebounce } from '../hooks/useDebounce';
 import { SearchResponse, StockSymbolMatch, ActiveFilters } from '../types/types';
-import { Search, X, Filter, AlertTriangle, Loader2 } from 'lucide-react';
+import { Search, X, Filter, AlertTriangle, Loader2, Table } from 'lucide-react';
 import FilterPanel from './FilterPanel';
+import StockTable from './StockTable';
 
 export default function SymbolSearch() {
     const [keyword, setKeyword] = useState<string>('');
@@ -28,6 +29,7 @@ export default function SymbolSearch() {
         regions: [],
         currencies: [],
     });
+    const [showTable, setShowTable] = useState<boolean>(false);
 
     const searchContainerRef = useRef<HTMLDivElement>(null);
     const debouncedKeyword = useDebounce<string>(keyword, 500);
@@ -78,7 +80,7 @@ export default function SymbolSearch() {
                     setShowResults(true);
                 }
             } catch (err) {
-                console.log(err)
+                console.log(err);
                 setError('An error occurred while fetching search results.');
                 setSearchResults([]);
                 setFilterOptions({ types: [], regions: [], currencies: [] });
@@ -107,6 +109,7 @@ export default function SymbolSearch() {
         setKeyword('');
         setSearchResults([]);
         setShowResults(false);
+        setShowTable(false);
         setFilterOptions({ types: [], regions: [], currencies: [] });
         setActiveFilters({ types: [], regions: [], currencies: [] });
     }
@@ -124,8 +127,15 @@ export default function SymbolSearch() {
         activeFilters.regions.length +
         activeFilters.currencies.length;
 
+    // Handle show in table
+    function handleShowInTable() {
+        setShowResults(false);
+        setShowFilters(false);
+        setShowTable(true);
+    }
+
     return (
-        <div className="w-full max-w-2xl mx-auto p-4" ref={searchContainerRef}>
+        <div className="w-full max-w-8xl mx-auto p-4" ref={searchContainerRef}>
             <div className="relative">
                 <div className="flex items-center border-2 rounded-lg overflow-hidden shadow-sm focus-within:shadow-md focus-within:border-blue-500 transition-all bg-white">
                     <div className="pl-3 text-gray-400">
@@ -194,6 +204,18 @@ export default function SymbolSearch() {
 
                 {showResults && filteredResults.length > 0 && (
                     <div className="absolute z-10 mt-1 w-full bg-white rounded-md shadow-lg max-h-96 overflow-y-auto border border-gray-200">
+                        <div className="flex justify-between items-center p-2 sticky top-0 bg-white border-b border-gray-100 z-20">
+                            <span className="text-sm font-medium text-gray-700">
+                                {filteredResults.length} {filteredResults.length === 1 ? 'result' : 'results'} found
+                            </span>
+                            <button
+                                onClick={handleShowInTable}
+                                className="flex items-center text-sm text-blue-600 hover:text-blue-800 py-1 px-2 rounded hover:bg-blue-50"
+                            >
+                                <Table size={16} className="mr-1" />
+                                Show in Table
+                            </button>
+                        </div>
                         <ul className="py-1">
                             {filteredResults.map((result, index) => (
                                 <li
@@ -238,6 +260,44 @@ export default function SymbolSearch() {
                     </div>
                 )}
             </div>
+
+            {/* Table View */}
+            {showTable && filteredResults.length > 0 && (
+                <div className="mt-6 mx-auto max-w-7xl">
+                    <div className="flex justify-between items-center mb-4">
+                        <h2 className="text-lg font-medium text-gray-800">
+                            {`Search Results for "${keyword}"`}
+                        </h2>
+                        <button
+                            onClick={() => setShowTable(false)}
+                            className="text-sm text-blue-600 hover:text-blue-800"
+                        >
+                            Hide Table
+                        </button>
+                    </div>
+                    <StockTable data={filteredResults} />
+                </div>
+            )}
+
+            {filteredResults.length === 0 && searchResults.length > 0 && (
+
+                <div className="mt-6 mx-auto max-w-7xl">
+                    <div className="flex justify-between items-center mb-4">
+                        <div className="mt-1 w-full text-center flex flex-col items-center justify-center">
+                            <p className="text-gray-500 text-center">No results match the selected filters.</p>
+                            <button
+                                onClick={resetFilters}
+                                className="mt-2 w-full text-center text-sm text-blue-500 hover:text-blue-700"
+                            >
+                                Reset filters
+                            </button>
+                        </div>
+
+                    </div>
+                </div>
+
+            )}
+
         </div>
     );
 }

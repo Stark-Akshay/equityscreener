@@ -7,6 +7,7 @@ import { SearchResponse, StockSymbolMatch, ActiveFilters } from '../types/types'
 import { Search, X, Filter, AlertTriangle, Loader2, Table } from 'lucide-react';
 import FilterPanel from './FilterPanel';
 import StockTable from './StockTable';
+import DashboardModal from './DashboardModal';
 
 export default function SymbolSearch() {
     const [keyword, setKeyword] = useState<string>('');
@@ -30,6 +31,8 @@ export default function SymbolSearch() {
         currencies: [],
     });
     const [showTable, setShowTable] = useState<boolean>(false);
+    const [selectedItems, setSelectedItems] = useState<StockSymbolMatch[]>([]);
+    const [isDashboardOpen, setIsDashboardOpen] = useState<boolean>(false);
 
     const searchContainerRef = useRef<HTMLDivElement>(null);
     const debouncedKeyword = useDebounce<string>(keyword, 500);
@@ -112,6 +115,7 @@ export default function SymbolSearch() {
         setShowTable(false);
         setFilterOptions({ types: [], regions: [], currencies: [] });
         setActiveFilters({ types: [], regions: [], currencies: [] });
+        setSelectedItems([]);
     }
 
     function handleFilterToggle() {
@@ -134,10 +138,21 @@ export default function SymbolSearch() {
         setShowTable(true);
     }
 
+    // Handle selection changes from the table
+    function handleSelectionChange(selected: StockSymbolMatch[]) {
+        setSelectedItems(selected);
+        console.log('Selected items:', selected);
+    }
+
+    // Handle view in dashboard
+    function handleViewDashboard() {
+        setIsDashboardOpen(true);
+    }
+
     return (
         <div className="w-full max-w-8xl mx-auto p-4" ref={searchContainerRef}>
             <div className="relative">
-                <div className="flex items-center border-2 rounded-lg overflow-hidden shadow-sm focus-within:shadow-md focus-within:border-blue-500 transition-all bg-white">
+                <div className={`flex items-center border-2 rounded-lg overflow-hidden shadow-sm focus-within:shadow-md focus-within:border-blue-500 transition-all bg-white ${isDashboardOpen ? 'opacity-75 scale-98 pointer-events-none' : 'opacity-100 scale-100'} duration-300 ease-out`}>
                     <div className="pl-3 text-gray-400">
                         <Search size={20} />
                     </div>
@@ -156,7 +171,7 @@ export default function SymbolSearch() {
                     {keyword && (
                         <button
                             onClick={clearSearch}
-                            className="px-3 text-gray-400 hover:text-gray-600"
+                            className={`px-3 text-gray-400 hover:text-gray-600 transition-opacity duration-300 ${isDashboardOpen ? 'opacity-0' : 'opacity-100'}`}
                             aria-label="Clear search"
                         >
                             <X size={20} />
@@ -166,7 +181,7 @@ export default function SymbolSearch() {
                         <div className="px-3 relative">
                             <button
                                 onClick={handleFilterToggle}
-                                className={`relative ${showFilters ? 'text-blue-500' : 'text-gray-400 hover:text-gray-600'}`}
+                                className={`relative ${showFilters ? 'text-blue-500' : 'text-gray-400 hover:text-gray-600'} transition-opacity duration-300 ${isDashboardOpen ? 'opacity-0' : 'opacity-100'}`}
                                 aria-label="Filter results"
                             >
                                 <Filter size={20} />
@@ -181,29 +196,31 @@ export default function SymbolSearch() {
                 </div>
 
                 {isLoading && (
-                    <div className="absolute right-16 top-3.5 text-blue-500">
+                    <div className={`absolute right-16 top-3.5 text-blue-500 transition-all duration-300 ${isDashboardOpen ? 'opacity-0 translate-y-2' : 'opacity-100 translate-y-0'}`}>
                         <Loader2 size={20} className="animate-spin" />
                     </div>
                 )}
 
                 {error && (
-                    <div className="mt-2 p-3 bg-red-50 text-red-600 rounded-md flex items-start">
+                    <div className={`mt-2 p-3 bg-red-50 text-red-600 rounded-md flex items-start transition-all duration-300 ${isDashboardOpen ? 'opacity-0 translate-y-2' : 'opacity-100 translate-y-0'}`}>
                         <AlertTriangle size={20} className="mr-2 flex-shrink-0 mt-0.5" />
                         <p>{error}</p>
                     </div>
                 )}
 
                 {showFilters && searchResults.length > 0 && (
-                    <FilterPanel
-                        options={filterOptions}
-                        activeFilters={activeFilters}
-                        setActiveFilters={setActiveFilters}
-                        resetFilters={resetFilters}
-                    />
+                    <div className={`absolute z-20 w-full transition-all duration-300 ${isDashboardOpen ? 'opacity-0 translate-y-4 pointer-events-none' : 'opacity-100 translate-y-0'}`}>
+                        <FilterPanel
+                            options={filterOptions}
+                            activeFilters={activeFilters}
+                            setActiveFilters={setActiveFilters}
+                            resetFilters={resetFilters}
+                        />
+                    </div>
                 )}
 
                 {showResults && filteredResults.length > 0 && (
-                    <div className="absolute z-10 mt-1 w-full bg-white rounded-md shadow-lg max-h-96 overflow-y-auto border border-gray-200">
+                    <div className={`absolute z-10 mt-1 w-full bg-white rounded-md shadow-lg max-h-96 overflow-y-auto border border-gray-200 transition-all duration-300 ${isDashboardOpen ? 'opacity-0 translate-y-4 pointer-events-none' : 'opacity-100 translate-y-0'}`}>
                         <div className="flex justify-between items-center p-2 sticky top-0 bg-white border-b border-gray-100 z-20">
                             <span className="text-sm font-medium text-gray-700">
                                 {filteredResults.length} {filteredResults.length === 1 ? 'result' : 'results'} found
@@ -220,7 +237,7 @@ export default function SymbolSearch() {
                             {filteredResults.map((result, index) => (
                                 <li
                                     key={`${result["1. symbol"]}-${index}`}
-                                    className="px-4 py-3 hover:bg-gray-50 cursor-pointer flex justify-between items-center border-b border-gray-100 last:border-b-0"
+                                    className="px-4 py-3 hover:bg-gray-50 cursor-pointer flex justify-between items-center border-b border-gray-100 last:border-b-0 transition-colors duration-200"
                                 >
                                     <div>
                                         <div className="font-medium text-gray-800">{result["1. symbol"]}</div>
@@ -243,7 +260,7 @@ export default function SymbolSearch() {
                 )}
 
                 {showResults && keyword && filteredResults.length === 0 && searchResults.length > 0 && (
-                    <div className="absolute z-10 mt-1 w-full bg-white rounded-md shadow-lg p-4 border border-gray-200">
+                    <div className={`absolute z-10 mt-1 w-full bg-white rounded-md shadow-lg p-4 border border-gray-200 transition-all duration-300 ${isDashboardOpen ? 'opacity-0 translate-y-4 pointer-events-none' : 'opacity-100 translate-y-0'}`}>
                         <p className="text-gray-500 text-center">No results match the selected filters.</p>
                         <button
                             onClick={resetFilters}
@@ -255,7 +272,7 @@ export default function SymbolSearch() {
                 )}
 
                 {showResults && keyword && searchResults.length === 0 && !error && !isLoading && (
-                    <div className="absolute z-10 mt-1 w-full bg-white rounded-md shadow-lg p-4 border border-gray-200">
+                    <div className={`absolute z-10 mt-1 w-full bg-white rounded-md shadow-lg p-4 border border-gray-200 transition-all duration-300 ${isDashboardOpen ? 'opacity-0 translate-y-4 pointer-events-none' : 'opacity-100 translate-y-0'}`}>
                         <p className="text-gray-500 text-center">{`No results found for "${keyword}"`}.</p>
                     </div>
                 )}
@@ -263,7 +280,7 @@ export default function SymbolSearch() {
 
             {/* Table View */}
             {showTable && filteredResults.length > 0 && (
-                <div className="mt-6 mx-auto max-w-7xl">
+                <div className={`mt-6 mx-auto max-w-7xl transition-all duration-500 ease-out ${isDashboardOpen ? 'opacity-50 blur-sm scale-98' : 'opacity-100 blur-0 scale-100'}`}>
                     <div className="flex justify-between items-center mb-4">
                         <h2 className="text-lg font-medium text-gray-800">
                             {`Search Results for "${keyword}"`}
@@ -275,13 +292,16 @@ export default function SymbolSearch() {
                             Hide Table
                         </button>
                     </div>
-                    <StockTable data={filteredResults} />
+                    <StockTable
+                        data={filteredResults}
+                        onSelectionChange={handleSelectionChange}
+                        onViewDashboard={handleViewDashboard}
+                    />
                 </div>
             )}
 
             {filteredResults.length === 0 && searchResults.length > 0 && (
-
-                <div className="mt-6 mx-auto max-w-7xl">
+                <div className={`mt-6 mx-auto max-w-7xl transition-all duration-500 ease-out ${isDashboardOpen ? 'opacity-50 blur-sm scale-98' : 'opacity-100 blur-0 scale-100'}`}>
                     <div className="flex justify-between items-center mb-4">
                         <div className="mt-1 w-full text-center flex flex-col items-center justify-center">
                             <p className="text-gray-500 text-center">No results match the selected filters.</p>
@@ -292,12 +312,16 @@ export default function SymbolSearch() {
                                 Reset filters
                             </button>
                         </div>
-
                     </div>
                 </div>
-
             )}
 
+            {/* Dashboard Modal */}
+            <DashboardModal
+                isOpen={isDashboardOpen}
+                onClose={() => setIsDashboardOpen(false)}
+                selectedItems={selectedItems}
+            />
         </div>
     );
 }

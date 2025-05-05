@@ -80,7 +80,7 @@ export default function FilterPanel({
     };
 
     return (
-        <div className="absolute z-20 mt-1 w-full bg-white rounded-md shadow-lg border border-gray-200 p-4">
+        <div className="mt-1 w-full bg-white rounded-md shadow-lg border border-gray-200 p-4">
             <div className="flex justify-between items-center mb-3">
                 <h3 className="text-sm font-medium text-gray-700">Filter Results</h3>
                 <button

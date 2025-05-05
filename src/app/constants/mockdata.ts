@@ -118,8 +118,6 @@ export const testFilterOptions = {
   currencies: ["USD", "EUR", "CAD"],
 };
 
-// constants/constants.ts
-
 // Map regions to countries
 export const REGION_TO_COUNTRY: { [key: string]: string } = {
   "United States": "United States",

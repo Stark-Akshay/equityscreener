@@ -1,5 +1,6 @@
 // app/components/StockTable.tsx
 import { useState, useEffect, useRef } from 'react';
+import { useRouter } from 'next/navigation';
 import { StockSymbolMatch } from '../types/types';
 import { ChevronLeft, ChevronRight, ArrowUp, ArrowDown, Check, BarChart2 } from 'lucide-react';
 import { generateBloombergTicker, getCountryFromRegion } from '@/app/constants/mockdata';
@@ -23,11 +24,13 @@ type SortField =
     | '9. matchScore';
 
 export default function StockTable({ data, pageSize = 5, onSelectionChange, onViewDashboard }: StockTableProps) {
+    const router = useRouter();
     const [currentPage, setCurrentPage] = useState(1);
     const [sortField, setSortField] = useState<SortField | null>(null);
     const [sortDirection, setSortDirection] = useState<SortDirection>(null);
     const [selectedItems, setSelectedItems] = useState<Set<string>>(new Set());
     const selectAllRef = useRef<HTMLInputElement>(null);
+    const tableRef = useRef<HTMLTableElement>(null);
 
     // Update the indeterminate state when the component renders
     useEffect(() => {
@@ -35,6 +38,34 @@ export default function StockTable({ data, pageSize = 5, onSelectionChange, onVi
             selectAllRef.current.indeterminate = isSomePageSelected();
         }
     }, [selectedItems]);
+
+    // Handle keyboard navigation in the table
+    useEffect(() => {
+        const handleKeyDown = (e: KeyboardEvent) => {
+            if (!tableRef.current || !document.activeElement) return;
+
+            // Check if focus is within the table
+            if (!tableRef.current.contains(document.activeElement)) return;
+
+            switch (e.key) {
+                case 'ArrowRight':
+                    if (currentPage < totalPages) {
+                        goToPage(currentPage + 1);
+                        e.preventDefault();
+                    }
+                    break;
+                case 'ArrowLeft':
+                    if (currentPage > 1) {
+                        goToPage(currentPage - 1);
+                        e.preventDefault();
+                    }
+                    break;
+            }
+        };
+
+        document.addEventListener('keydown', handleKeyDown);
+        return () => document.removeEventListener('keydown', handleKeyDown);
+    }, [currentPage]);
 
     // Check if adding this item would exceed the limit
     const isAtSelectionLimit = () => selectedItems.size >= 5;
@@ -108,12 +139,14 @@ export default function StockTable({ data, pageSize = 5, onSelectionChange, onVi
         if (sortField !== field) return null;
 
         return sortDirection === 'asc' ?
-            <ArrowUp size={16} className="ml-1" /> :
-            <ArrowDown size={16} className="ml-1" />;
+            <ArrowUp size={16} className="ml-1" aria-hidden="true" /> :
+            <ArrowDown size={16} className="ml-1" aria-hidden="true" />;
     };
 
     // Handle individual item selection
-    const handleItemSelect = (symbol: string) => {
+    const handleItemSelect = (e: React.MouseEvent, symbol: string) => {
+        e.stopPropagation(); // Prevent row click when checkbox is clicked
+
         const newSelected = new Set(selectedItems);
         if (newSelected.has(symbol)) {
             newSelected.delete(symbol);
@@ -132,7 +165,9 @@ export default function StockTable({ data, pageSize = 5, onSelectionChange, onVi
     };
 
     // Handle select all
-    const handleSelectAll = () => {
+    const handleSelectAll = (e: React.MouseEvent) => {
+        e.stopPropagation(); // Prevent row click
+
         if (selectedItems.size === paginatedData.length &&
             paginatedData.every(item => selectedItems.has(item["1. symbol"]))) {
             // All current page items are selected, deselect all
@@ -155,6 +190,19 @@ export default function StockTable({ data, pageSize = 5, onSelectionChange, onVi
         }
     };
 
+    // Handle row click to navigate to stock detail page
+    const handleRowClick = (symbol: string) => {
+        router.push(`/stock/${symbol}`);
+    };
+
+    // Handle keyboard row activation
+    const handleRowKeyDown = (e: React.KeyboardEvent, symbol: string) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault();
+            handleRowClick(symbol);
+        }
+    };
+
     // Check if item is selected
     const isItemSelected = (symbol: string) => selectedItems.has(symbol);
 
@@ -170,11 +218,21 @@ export default function StockTable({ data, pageSize = 5, onSelectionChange, onVi
             !isAllPageSelected();
     };
 
+    // Get sort description for screen readers
+    const getSortDescription = (field: SortField) => {
+        if (sortField !== field) return 'Not sorted';
+        return `Sorted ${sortDirection === 'asc' ? 'ascending' : 'descending'}`;
+    };
+
     return (
         <div className="bg-white rounded-lg shadow-md w-full">
             {/* Selection toolbar */}
             {selectedItems.size > 0 && (
-                <div className="px-6 py-3 bg-blue-50 border-b border-blue-100 flex items-center justify-between">
+                <div
+                    className="px-6 py-3 bg-blue-50 border-b border-blue-100 flex items-center justify-between"
+                    aria-live="polite"
+                    aria-atomic="true"
+                >
                     <div className="flex items-center gap-6">
                         <div className="text-sm font-medium text-blue-700">
                             {selectedItems.size} item{selectedItems.size > 1 ? 's' : ''} selected
@@ -184,9 +242,10 @@ export default function StockTable({ data, pageSize = 5, onSelectionChange, onVi
                         </div>
                         <button
                             onClick={onViewDashboard}
-                            className="flex items-center px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-md hover:bg-blue-700 transition-colors"
+                            className="flex items-center px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-md hover:bg-blue-700 transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+                            aria-label="View selected items in dashboard"
                         >
-                            <BarChart2 size={16} className="mr-2" />
+                            <BarChart2 size={16} className="mr-2" aria-hidden="true" />
                             View in Dashboard
                         </button>
                     </div>
@@ -195,7 +254,8 @@ export default function StockTable({ data, pageSize = 5, onSelectionChange, onVi
                             setSelectedItems(new Set());
                             onSelectionChange?.([]);
                         }}
-                        className="text-sm text-blue-600 hover:text-blue-800"
+                        className="text-sm text-blue-600 hover:text-blue-800 focus:outline-none focus:underline"
+                        aria-label="Clear all selections"
                     >
                         Clear selection
                     </button>
@@ -203,15 +263,25 @@ export default function StockTable({ data, pageSize = 5, onSelectionChange, onVi
             )}
 
             {/* Horizontal scroll wrapper */}
-            <div className="overflow-x-auto">
+            <div className="overflow-x-auto" role="region" aria-label="Scrollable stock data table">
                 <div className="min-w-[1000px]">
-                    <table className="w-full divide-y divide-gray-200">
+                    <table
+                        className="w-full divide-y divide-gray-200"
+                        ref={tableRef}
+                        aria-label="Stock symbols and details table"
+                    >
+                        <caption className="sr-only">
+                            Table of stock symbols with details and selection options.
+                            {selectedItems.size > 0 && `${selectedItems.size} items selected.`}
+                            {sortField && `Table is sorted by ${sortField} in ${sortDirection} order.`}
+                        </caption>
                         <thead className="bg-gray-50">
                             <tr>
                                 <th
                                     scope="col"
                                     className="relative px-6 py-3 text-left"
                                 >
+                                    <span className="sr-only">Select all rows</span>
                                     <div className="flex items-center">
                                         <label className="custom-checkbox">
                                             <input
@@ -219,13 +289,16 @@ export default function StockTable({ data, pageSize = 5, onSelectionChange, onVi
                                                 type="checkbox"
                                                 className="hidden"
                                                 checked={isAllPageSelected()}
-                                                onChange={handleSelectAll}
+                                                onChange={() => { }}
+                                                onClick={(e) => handleSelectAll(e)}
+                                                aria-label={`${isAllPageSelected() ? 'Deselect' : 'Select'} all items on this page`}
                                             />
                                             <span
                                                 className={`w-4 h-4 border-2 rounded flex items-center justify-center ${isAllPageSelected() ? 'bg-blue-600 border-blue-600' :
-                                                        isSomePageSelected() ? 'bg-blue-600 border-blue-600' :
-                                                            'border-gray-300'
+                                                    isSomePageSelected() ? 'bg-blue-600 border-blue-600' :
+                                                        'border-gray-300'
                                                     }`}
+                                                aria-hidden="true"
                                             >
                                                 {isAllPageSelected() && <Check size={12} className="text-white" />}
                                                 {isSomePageSelected() && !isAllPageSelected() && (
@@ -235,142 +308,109 @@ export default function StockTable({ data, pageSize = 5, onSelectionChange, onVi
                                         </label>
                                     </div>
                                 </th>
-                                <th
-                                    scope="col"
-                                    className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer whitespace-nowrap"
-                                    onClick={() => handleSort('1. symbol')}
-                                >
-                                    <div className="flex items-center">
-                                        Symbol
-                                        {getSortIndicator('1. symbol')}
-                                    </div>
-                                </th>
-                                <th
-                                    scope="col"
-                                    className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer whitespace-nowrap"
-                                    onClick={() => handleSort('2. name')}
-                                >
-                                    <div className="flex items-center">
-                                        Company Name
-                                        {getSortIndicator('2. name')}
-                                    </div>
-                                </th>
-                                <th
-                                    scope="col"
-                                    className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer whitespace-nowrap"
-                                    onClick={() => handleSort('bloombergTicker')}
-                                >
-                                    <div className="flex items-center">
-                                        Bloomberg Ticker
-                                        {getSortIndicator('bloombergTicker')}
-                                    </div>
-                                </th>
-                                <th
-                                    scope="col"
-                                    className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer whitespace-nowrap"
-                                    onClick={() => handleSort('3. type')}
-                                >
-                                    <div className="flex items-center">
-                                        Asset Class
-                                        {getSortIndicator('3. type')}
-                                    </div>
-                                </th>
-                                <th
-                                    scope="col"
-                                    className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer whitespace-nowrap"
-                                    onClick={() => handleSort('4. region')}
-                                >
-                                    <div className="flex items-center">
-                                        Region
-                                        {getSortIndicator('4. region')}
-                                    </div>
-                                </th>
-                                <th
-                                    scope="col"
-                                    className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer whitespace-nowrap"
-                                    onClick={() => handleSort('country')}
-                                >
-                                    <div className="flex items-center">
-                                        Country
-                                        {getSortIndicator('country')}
-                                    </div>
-                                </th>
-                                <th
-                                    scope="col"
-                                    className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer whitespace-nowrap"
-                                    onClick={() => handleSort('8. currency')}
-                                >
-                                    <div className="flex items-center">
-                                        Currency
-                                        {getSortIndicator('8. currency')}
-                                    </div>
-                                </th>
-                                <th
-                                    scope="col"
-                                    className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer whitespace-nowrap"
-                                    onClick={() => handleSort('9. matchScore')}
-                                >
-                                    <div className="flex items-center">
-                                        Match Score
-                                        {getSortIndicator('9. matchScore')}
-                                    </div>
-                                </th>
+                                {[
+                                    { id: '1. symbol', label: 'Symbol' },
+                                    { id: '2. name', label: 'Company Name' },
+                                    { id: 'bloombergTicker', label: 'Bloomberg Ticker' },
+                                    { id: '3. type', label: 'Asset Class' },
+                                    { id: '4. region', label: 'Region' },
+                                    { id: 'country', label: 'Country' },
+                                    { id: '8. currency', label: 'Currency' },
+                                    { id: '9. matchScore', label: 'Match Score' }
+                                ].map((column) => (
+                                    <th
+                                        key={column.id}
+                                        scope="col"
+                                        className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer whitespace-nowrap"
+                                        onClick={() => handleSort(column.id as SortField)}
+                                        aria-sort={sortField === column.id ? (sortDirection === 'asc' ? 'ascending' : 'descending') : 'none'}
+                                        tabIndex={0}
+                                        role="columnheader"
+                                        onKeyDown={(e) => {
+                                            if (e.key === 'Enter' || e.key === ' ') {
+                                                e.preventDefault();
+                                                handleSort(column.id as SortField);
+                                            }
+                                        }}
+                                    >
+                                        <div className="flex items-center">
+                                            {column.label}
+                                            {getSortIndicator(column.id as SortField)}
+                                            <span className="sr-only">{getSortDescription(column.id as SortField)}</span>
+                                        </div>
+                                    </th>
+                                ))}
                             </tr>
                         </thead>
                         <tbody className="bg-white divide-y divide-gray-200">
                             {paginatedData.map((stock, index) => (
                                 <tr
                                     key={`${stock["1. symbol"]}-${index}`}
-                                    className={`hover:bg-gray-50 ${isItemSelected(stock["1. symbol"]) ? 'bg-blue-50' : ''}`}
+                                    className={`hover:bg-gray-50 ${isItemSelected(stock["1. symbol"]) ? 'bg-blue-50' : ''} cursor-pointer`}
+                                    onClick={() => handleRowClick(stock["1. symbol"])}
+                                    onKeyDown={(e) => handleRowKeyDown(e, stock["1. symbol"])}
+                                    tabIndex={0}
+                                    role="row"
+                                    aria-selected={isItemSelected(stock["1. symbol"])}
                                 >
-                                    <td className="px-6 py-4 whitespace-nowrap">
-                                        <label className={`custom-checkbox ${isAtSelectionLimit() && !isItemSelected(stock["1. symbol"]) ? 'cursor-not-allowed' : 'cursor-pointer'}`}>
+                                    <td
+                                        className="px-6 py-4 whitespace-nowrap"
+                                        onClick={(e) => e.stopPropagation()}
+                                        role="cell"
+                                    >
+                                        <label
+                                            className={`custom-checkbox ${isAtSelectionLimit() && !isItemSelected(stock["1. symbol"]) ? 'cursor-not-allowed' : 'cursor-pointer'}`}
+                                            aria-label={`${isItemSelected(stock["1. symbol"]) ? 'Deselect' : 'Select'} ${stock["1. symbol"]}`}
+                                        >
                                             <input
                                                 type="checkbox"
                                                 className="hidden"
                                                 checked={isItemSelected(stock["1. symbol"])}
-                                                onChange={() => handleItemSelect(stock["1. symbol"])}
+                                                onChange={() => { }}
+                                                onClick={(e) => handleItemSelect(e, stock["1. symbol"])}
                                                 disabled={isAtSelectionLimit() && !isItemSelected(stock["1. symbol"])}
+                                                aria-label={`${isItemSelected(stock["1. symbol"]) ? 'Deselect' : 'Select'} ${stock["2. name"]}`}
                                             />
                                             <span
                                                 className={`w-4 h-4 border-2 rounded flex items-center justify-center transition-colors ${isItemSelected(stock["1. symbol"]) ? 'bg-blue-600 border-blue-600' :
-                                                        isAtSelectionLimit() && !isItemSelected(stock["1. symbol"]) ? 'border-gray-200' :
-                                                            'border-gray-300'
+                                                    isAtSelectionLimit() && !isItemSelected(stock["1. symbol"]) ? 'border-gray-200' :
+                                                        'border-gray-300'
                                                     }`}
+                                                aria-hidden="true"
                                             >
                                                 {isItemSelected(stock["1. symbol"]) && <Check size={12} className="text-white" />}
                                             </span>
                                         </label>
                                     </td>
-                                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900" role="cell">
                                         {stock["1. symbol"]}
                                     </td>
-                                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-800">
+                                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-800" role="cell">
                                         {stock["2. name"]}
                                     </td>
-                                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-800">
+                                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-800" role="cell">
                                         {generateBloombergTicker(stock["1. symbol"], stock["4. region"])}
                                     </td>
-                                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-800">
+                                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-800" role="cell">
                                         {stock["3. type"]}
                                     </td>
-                                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-800">
+                                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-800" role="cell">
                                         {stock["4. region"]}
                                     </td>
-                                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-800">
+                                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-800" role="cell">
                                         {getCountryFromRegion(stock["4. region"])}
                                     </td>
-                                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-800">
+                                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-800" role="cell">
                                         {stock["8. currency"]}
                                     </td>
-                                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-800">
+                                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-800" role="cell">
                                         {parseFloat(stock["9. matchScore"]).toFixed(4)}
                                     </td>
                                 </tr>
                             ))}
                             {paginatedData.length === 0 && (
                                 <tr>
-                                    <td colSpan={9} className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 text-center">
+                                    <td colSpan={9} className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 text-center" role="cell">
                                         No results found
                                     </td>
                                 </tr>
@@ -385,7 +425,7 @@ export default function StockTable({ data, pageSize = 5, onSelectionChange, onVi
                 <div className="px-4 py-3 border-t border-gray-200">
                     <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
                         <div className="text-center sm:text-left">
-                            <p className="text-sm text-gray-700">
+                            <p className="text-sm text-gray-700" aria-live="polite">
                                 Showing <span className="font-medium">{(currentPage - 1) * pageSize + 1}</span> to{' '}
                                 <span className="font-medium">
                                     {Math.min(currentPage * pageSize, data.length)}
@@ -398,7 +438,8 @@ export default function StockTable({ data, pageSize = 5, onSelectionChange, onVi
                                 <button
                                     onClick={() => goToPage(currentPage - 1)}
                                     disabled={currentPage === 1}
-                                    className="relative inline-flex items-center px-2 py-2 rounded-l-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                                    className="relative inline-flex items-center px-2 py-2 rounded-l-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed focus:outline-none focus:ring-2 focus:ring-blue-500 focus:z-20"
+                                    aria-label="Previous page"
                                 >
                                     <span className="sr-only">Previous</span>
                                     <ChevronLeft className="h-5 w-5" aria-hidden="true" />
@@ -408,10 +449,12 @@ export default function StockTable({ data, pageSize = 5, onSelectionChange, onVi
                                     <button
                                         key={page}
                                         onClick={() => goToPage(page)}
-                                        className={`relative inline-flex items-center px-4 py-2 border text-sm font-medium ${page === currentPage
+                                        className={`relative inline-flex items-center px-4 py-2 border text-sm font-medium focus:outline-none focus:ring-2 focus:ring-blue-500 focus:z-20 ${page === currentPage
                                             ? 'z-10 bg-blue-50 border-blue-500 text-blue-600'
                                             : 'bg-white border-gray-300 text-gray-500 hover:bg-gray-50'
                                             }`}
+                                        aria-label={`Page ${page}`}
+                                        aria-current={page === currentPage ? 'page' : undefined}
                                     >
                                         {page}
                                     </button>
@@ -420,7 +463,8 @@ export default function StockTable({ data, pageSize = 5, onSelectionChange, onVi
                                 <button
                                     onClick={() => goToPage(currentPage + 1)}
                                     disabled={currentPage === totalPages}
-                                    className="relative inline-flex items-center px-2 py-2 rounded-r-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                                    className="relative inline-flex items-center px-2 py-2 rounded-r-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed focus:outline-none focus:ring-2 focus:ring-blue-500 focus:z-20"
+                                    aria-label="Next page"
                                 >
                                     <span className="sr-only">Next</span>
                                     <ChevronRight className="h-5 w-5" aria-hidden="true" />

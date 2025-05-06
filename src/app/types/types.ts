@@ -19,6 +19,10 @@ export type StockSymbolMatch = {
   "9. matchScore": string;
 };
 
+export type StockSymbolResponse = {
+  bestMatches: StockSymbolMatch[];
+};
+
 export type SearchResponse = {
   testResult?: StockSymbolMatch[];
   testFilterOptions?: FilterOptions;
@@ -81,3 +85,65 @@ export interface AlphaVantageResponse {
   Error?: string;
   Note?: string;
 }
+
+//Types for news items
+
+export interface FilteredNewsItem {
+  title: string;
+  url: string;
+  timePublished: string;
+  summary: string;
+  source: string;
+  bannerImage: string;
+  overallSentiment: string;
+}
+
+export interface FilteredOverview {
+  Symbol: string;
+  AssetType: string;
+  Name: string;
+  Description: string;
+  Exchange: string;
+  Currency: string;
+  Country: string;
+  Sector: string;
+  Industry: string;
+  Address: string;
+  OfficialSite: string;
+  MarketCapitalization?: string;
+  PERatio?: string;
+  DividendYield?: string;
+  EPS?: string;
+  Beta?: string;
+  "52WeekHigh"?: string;
+  "52WeekLow"?: string;
+}
+
+export interface ApiResponse {
+  overview: FilteredOverview;
+  news: FilteredNewsItem[];
+  hasMoreNews: boolean;
+  totalNewsCount: number;
+}
+
+export type StockPricePoint = {
+  date: string;
+  close: number;
+};
+
+export type StockPriceData = {
+  symbol: string;
+  prices: StockPricePoint[];
+  error?: string;
+};
+
+export type DashboardModalProps = {
+  isOpen: boolean;
+  onClose: () => void;
+  selectedItems: StockSymbolMatch[];
+};
+
+export type ChartDataPoint = {
+  date: string;
+  [key: string]: number | string | null;
+};

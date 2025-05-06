@@ -1,14 +1,10 @@
-//src/app/symbol-search/route.ts
+//src/app/api/mock/symbol-search/route.ts
 
 import { NextRequest } from "next/server";
-import axios from "axios";
+
 import { isThrottled } from "@/app/lib/throttle";
 
-import {
-  StockSymbolMatch as AlphaVantageMatch,
-  FilterOptions,
-  StockSymbolResponse as AlphaVantageResponse,
-} from "@/app/types/types";
+import { testFilterOptions, testResult } from "@/app/constants/mockdata";
 
 const MIN_TIME_BETWEEN_CALLS_MS = 15_000; // 15 seconds
 
@@ -42,33 +38,7 @@ export async function GET(req: NextRequest) {
       { status: 400 }
     );
   }
-  // TODO: Uncomment this later for real-time data.
   try {
-    const response = await axios.get<AlphaVantageResponse>(
-      "https://www.alphavantage.co/query",
-      {
-        params: {
-          function: "SYMBOL_SEARCH",
-          keywords: keyword,
-          apikey: process.env.ALPHA_VANTAGE_API_KEY,
-        },
-      }
-    );
-
-    const testResult = response.data.bestMatches || [];
-
-    const testFilterOptions: FilterOptions = {
-      types: [
-        ...new Set(testResult.map((m: AlphaVantageMatch) => m["3. type"])),
-      ],
-      regions: [
-        ...new Set(testResult.map((m: AlphaVantageMatch) => m["4. region"])),
-      ],
-      currencies: [
-        ...new Set(testResult.map((m: AlphaVantageMatch) => m["8. currency"])),
-      ],
-    };
-
     return new Response(
       JSON.stringify({
         // searchResults,

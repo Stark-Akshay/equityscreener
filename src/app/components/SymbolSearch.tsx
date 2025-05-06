@@ -8,6 +8,7 @@ import { Search, X, Filter, AlertTriangle, Loader2, Table } from 'lucide-react';
 import FilterPanel from './FilterPanel';
 import StockTable from './StockTable';
 import DashboardModal from './DashboardModal';
+import { getSymbolSearchUrl } from '../utils/apiIUtils';
 
 export default function SymbolSearch() {
     const [keyword, setKeyword] = useState<string>('');
@@ -66,7 +67,7 @@ export default function SymbolSearch() {
             setError(null);
 
             try {
-                const response = await fetch(`/api/symbol-search?keyword=${encodeURIComponent(debouncedKeyword)}`);
+                const response = await fetch(getSymbolSearchUrl(debouncedKeyword));
                 const data: SearchResponse = await response.json();
 
                 if (response.status === 429) {

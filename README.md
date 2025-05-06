@@ -2,8 +2,6 @@
 
 A mini web platform that allows users to search equities, view them in a rich table, drill into detail pages, and explore an interactive dashboard, all powered by the Alpha Vantage API.
 
-## 🚀 Live Demo
-
 ## ✨ Features Implemented
 
 ### Core Features (Completed)
